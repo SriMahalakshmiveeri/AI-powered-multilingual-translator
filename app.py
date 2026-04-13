@@ -145,25 +145,19 @@ for i, item in enumerate(reversed(st.session_state.history)):
 # -------------------- LOAD MODELS --------------------
 @st.cache_resource
 def load_models():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    multi_path = os.path.join(BASE_DIR, "translator_models", "models", "multi")
-    en_hi_path = os.path.join(BASE_DIR, "translator_models", "models", "en_hi")
-    hi_en_path = os.path.join(BASE_DIR, "translator_models", "models", "hi_en")
+    # English ↔ Hindi
+    en_hi_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-hi")
+    en_hi_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-hi")
 
+    hi_en_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-hi-en")
+    hi_en_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-hi-en")
 
-    multi_tokenizer = AutoTokenizer.from_pretrained(multi_path)
-    multi_model = AutoModelForSeq2SeqLM.from_pretrained(multi_path)
-    
-    en_hi_tokenizer = AutoTokenizer.from_pretrained(en_hi_path)
-    en_hi_model = AutoModelForSeq2SeqLM.from_pretrained(en_hi_path)
+    # English ↔ Telugu (NLLB model)
+    multi_tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
+    multi_model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
 
-    hi_en_tokenizer = AutoTokenizer.from_pretrained(hi_en_path)
-    hi_en_model = AutoModelForSeq2SeqLM.from_pretrained(hi_en_path)
-
-
-
-    return multi_tokenizer, multi_model,en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model
+    return multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model
 
 
 multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model = load_models()
