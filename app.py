@@ -38,27 +38,32 @@ div.stButton > button {
 </style>
 
 <div class="header-container">
-    <div class="gradient-text">🌐 AI Multilingual Translator</div>
-    <div class="subtitle">Real-time English ↔ Hindi Translation</div>
+    <div class="gradient-text">🌐 AI-Powered Multilingual Translator</div>
+    <div class="subtitle">English ↔ Hindi & Telugu Translation</div>
 </div>
 """, unsafe_allow_html=True)
 
-# -------------------- HISTORY --------------------
+# -------------------- SESSION --------------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # -------------------- LOAD MODELS --------------------
 @st.cache_resource
 def load_models():
+    # Hindi Models
     en_hi_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-hi")
     en_hi_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-hi")
 
     hi_en_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-hi-en")
     hi_en_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-hi-en")
 
-    return en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model
+    # Telugu (Multilingual model)
+    multi_tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
+    multi_model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
 
-en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model = load_models()
+    return multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model
+
+multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model = load_models()
 
 # -------------------- INPUT --------------------
 st.markdown("### 📝 Enter Text")
@@ -67,7 +72,7 @@ text = st.text_area("Enter Text", label_visibility="collapsed")
 st.markdown("### 🌐 Select Translation")
 direction = st.selectbox(
     "Select Language",
-    ["English → Hindi", "Hindi → English"],
+    ["English → Hindi", "Hindi → English", "English → Telugu", "Telugu → English"],
     label_visibility="collapsed"
 )
 
@@ -83,8 +88,26 @@ def translate(text, direction):
         outputs = hi_en_model.generate(**inputs)
         return hi_en_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
+    elif direction == "English → Telugu":
+        multi_tokenizer.src_lang = "eng_Latn"
+        inputs = multi_tokenizer(text, return_tensors="pt")
+        outputs = multi_model.generate(
+            **inputs,
+            forced_bos_token_id=multi_tokenizer.convert_tokens_to_ids("tel_Telu")
+        )
+        return multi_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    elif direction == "Telugu → English":
+        multi_tokenizer.src_lang = "tel_Telu"
+        inputs = multi_tokenizer(text, return_tensors="pt")
+        outputs = multi_model.generate(
+            **inputs,
+            forced_bos_token_id=multi_tokenizer.convert_tokens_to_ids("eng_Latn")
+        )
+        return multi_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
 # -------------------- BUTTON --------------------
-if st.button("Translate"):
+if st.button("🚀 Translate"):
     if text.strip() == "":
         st.warning("Please enter text")
     else:
@@ -98,7 +121,7 @@ if st.button("Translate"):
 
         st.success(result)
 
-# -------------------- HISTORY DISPLAY --------------------
+# -------------------- HISTORY --------------------
 st.sidebar.title("🕘 History")
 
 if st.sidebar.button("Clear History"):
