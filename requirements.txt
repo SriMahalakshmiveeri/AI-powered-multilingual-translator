@@ -1,8 +1,4 @@
 streamlit==1.32.0
 transformers==4.38.2
-torch==2.2.0
+torch==2.0.1
 sentencepiece
-python==3.11.7
-
-# to check everything works locally before pushing
-pip install -r requirements.txt
