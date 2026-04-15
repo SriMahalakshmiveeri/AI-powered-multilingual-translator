@@ -39,7 +39,7 @@ div.stButton > button {
 
 <div class="header-container">
     <div class="gradient-text">🌐 AI-Powered Multilingual Translator</div>
-    <div class="subtitle">English ↔ Hindi & Telugu Translation</div>
+    <div class="subtitle">BREAKING LANGUAGE BARRIERS WITH INTELLIGENT TRANSLATION</div>
 </div>
 """, unsafe_allow_html=True)
 
