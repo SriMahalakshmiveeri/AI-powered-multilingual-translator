@@ -71,7 +71,7 @@ def load_models():
 multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model = load_models()
 
 # -------------------- INPUT --------------------
-st.markdown("### 📝 Enter Text")
+st.markdown("### 📝 Enter Your Text")
 text = st.text_area("Enter Text", label_visibility="collapsed")
 
 st.markdown("### 🌐 Select Translation")
