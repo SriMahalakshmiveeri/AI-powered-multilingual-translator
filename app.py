@@ -1,5 +1,6 @@
 import streamlit as st
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import torch
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
@@ -39,9 +40,12 @@ div.stButton > button {
 
 <div class="header-container">
     <div class="gradient-text">🌐 AI-Powered Multilingual Translator</div>
-    <div class="subtitle">BREAKING LANGUAGE BARRIERS WITH INTELLIGENT TRANSLATION</div>
+    <div class="subtitle">Breaking Language Barriers with Intelligent Translation</div>
 </div>
 """, unsafe_allow_html=True)
+
+# -------------------- DEVICE --------------------
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # -------------------- SESSION --------------------
 if "history" not in st.session_state:
@@ -50,18 +54,19 @@ if "history" not in st.session_state:
 # -------------------- LOAD MODELS --------------------
 @st.cache_resource
 def load_models():
-    # Hindi Models
+    # Hindi Models (lightweight)
     en_hi_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-hi")
-    en_hi_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-hi")
+    en_hi_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-hi").to(device)
 
     hi_en_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-hi-en")
-    hi_en_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-hi-en")
+    hi_en_model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-hi-en").to(device)
 
-    # Telugu (Multilingual model)
+    # Telugu (Multilingual - slightly heavy but works)
     multi_tokenizer = AutoTokenizer.from_pretrained("facebook/nllb-200-distilled-600M")
-    multi_model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M")
+    multi_model = AutoModelForSeq2SeqLM.from_pretrained("facebook/nllb-200-distilled-600M").to(device)
 
     return multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model
+
 
 multi_tokenizer, multi_model, en_hi_tokenizer, en_hi_model, hi_en_tokenizer, hi_en_model = load_models()
 
@@ -79,30 +84,32 @@ direction = st.selectbox(
 # -------------------- TRANSLATE FUNCTION --------------------
 def translate(text, direction):
     if direction == "English → Hindi":
-        inputs = en_hi_tokenizer(text, return_tensors="pt", padding=True)
-        outputs = en_hi_model.generate(**inputs)
+        inputs = en_hi_tokenizer(text, return_tensors="pt", padding=True).to(device)
+        outputs = en_hi_model.generate(**inputs, max_length=200)
         return en_hi_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     elif direction == "Hindi → English":
-        inputs = hi_en_tokenizer(text, return_tensors="pt", padding=True)
-        outputs = hi_en_model.generate(**inputs)
+        inputs = hi_en_tokenizer(text, return_tensors="pt", padding=True).to(device)
+        outputs = hi_en_model.generate(**inputs, max_length=200)
         return hi_en_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     elif direction == "English → Telugu":
         multi_tokenizer.src_lang = "eng_Latn"
-        inputs = multi_tokenizer(text, return_tensors="pt")
+        inputs = multi_tokenizer(text, return_tensors="pt").to(device)
         outputs = multi_model.generate(
             **inputs,
-            forced_bos_token_id=multi_tokenizer.convert_tokens_to_ids("tel_Telu")
+            forced_bos_token_id=multi_tokenizer.convert_tokens_to_ids("tel_Telu"),
+            max_length=200
         )
         return multi_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     elif direction == "Telugu → English":
         multi_tokenizer.src_lang = "tel_Telu"
-        inputs = multi_tokenizer(text, return_tensors="pt")
+        inputs = multi_tokenizer(text, return_tensors="pt").to(device)
         outputs = multi_model.generate(
             **inputs,
-            forced_bos_token_id=multi_tokenizer.convert_tokens_to_ids("eng_Latn")
+            forced_bos_token_id=multi_tokenizer.convert_tokens_to_ids("eng_Latn"),
+            max_length=200
         )
         return multi_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
@@ -111,15 +118,20 @@ if st.button("🚀 Translate"):
     if text.strip() == "":
         st.warning("Please enter text")
     else:
-        result = translate(text, direction)
+        with st.spinner("Translating... ⏳"):
+            try:
+                result = translate(text, direction)
 
-        st.session_state.history.append({
-            "input": text,
-            "direction": direction,
-            "output": result
-        })
+                st.session_state.history.append({
+                    "input": text,
+                    "direction": direction,
+                    "output": result
+                })
 
-        st.success(result)
+                st.success(result)
+
+            except Exception as e:
+                st.error("❌ Translation failed. Please try again.")
 
 # -------------------- HISTORY --------------------
 st.sidebar.title("🕘 History")
